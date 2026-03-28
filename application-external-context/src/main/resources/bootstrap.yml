@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: application-external-context
+  cloud:
+    kubernetes:
+      config:
+        enabled: true
+        enable-api: false
+        paths:
+          - /app/config/application.yaml
+logging:
+  config: classpath:log4j2-json-console.xml # stdout log streaming for fluentd
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test, local
+  cloud:
+    kubernetes:
+      enabled: false
+      config:
+        enabled: false
+logging:
+  config: classpath:log4j2-local-console.xml

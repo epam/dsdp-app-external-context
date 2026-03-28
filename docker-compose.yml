@@ -1,0 +1,35 @@
+services:
+  mongodb:
+    image: mongo:8.2
+    container_name: app-context-mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+      MONGO_INITDB_DATABASE: app_context
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - registry-network
+
+  application-context-service:
+    build: .
+    container_name: application-context-service
+    depends_on:
+      - mongodb
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://admin:admin@mongodb:27017/app_context?authSource=admin
+      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
+    ports:
+      - "8080:8080"
+      - "5005:5005"
+    networks:
+      - registry-network
+volumes:
+  mongodb_data:
+    driver: local
+networks:
+  registry-network:
+    external: true
+    driver: bridge

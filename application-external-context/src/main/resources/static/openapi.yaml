@@ -1,0 +1,203 @@
+
+openapi: 3.0.3
+info:
+  title: Application external context service API
+  version: 1.0
+  description: |
+    API for managing application external contexts (steps and variables).
+servers:
+  - url: http://localhost:8080/v1alpha/applications
+    description: Base path for the API
+security:
+  - accessToken: []
+tags:
+  - name: Application Step External Context
+    description: API for managing external context of application steps
+  - name: Application Variable External Context
+    description: API for managing external context of application variables
+
+components:
+  securitySchemes:
+    accessToken:
+      type: apiKey
+      in: header
+      name: X-Access-Token
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    stepId:
+      name: stepId
+      in: path
+      required: true
+      schema:
+        type: string
+    key:
+      name: key
+      in: path
+      required: true
+      schema:
+        type: string
+    ttlSeconds:
+      name: ttlSeconds
+      in: query
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 0
+
+paths:
+  /{id}/steps/{stepId}:
+    put:
+      tags: [Application Step External Context]
+      summary: Create or update a step
+      description: Creates a new step or updates an existing step with the provided value.
+      parameters:
+        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/stepId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200': { description: Step created or updated successfully }
+        '400': { description: Invalid request body or validation error }
+    get:
+      tags: [Application Step External Context]
+      summary: Get a specific step
+      parameters:
+        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/stepId'
+      responses:
+        '200':
+          description: Step retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+        '400': { description: Validation error }
+    delete:
+      tags: [Application Step External Context]
+      summary: Delete a specific step
+      parameters:
+        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/stepId'
+      responses:
+        '200':
+          description: Step deletion status returned
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400': { description: Validation error }
+
+  /{id}/steps:
+    get:
+      tags: [Application Step External Context]
+      summary: Get all steps
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Steps retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+        '400': { description: Validation error }
+    delete:
+      tags: [Application Step External Context]
+      summary: Delete entire application context
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Context deletion status returned
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400': { description: Validation error }
+
+  /{id}/vars/{key}:
+    put:
+      tags: [Application Variable External Context]
+      summary: Create or update a variable
+      parameters:
+        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/key'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200': { description: Variable created or updated successfully }
+        '400': { description: Invalid request body or validation error }
+    get:
+      tags: [Application Variable External Context]
+      summary: Get a specific variable
+      parameters:
+        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/key'
+      responses:
+        '200':
+          description: Variable retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+        '400': { description: Validation error }
+    delete:
+      tags: [Application Variable External Context]
+      summary: Delete a specific variable
+      parameters:
+        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/key'
+      responses:
+        '200':
+          description: Variable deletion status returned
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400': { description: Validation error }
+
+  /{id}/vars:
+    get:
+      tags: [Application Variable External Context]
+      summary: Get all variables
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Variables retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+        '400': { description: Validation error }
+    delete:
+      tags: [Application Variable External Context]
+      summary: Delete entire application context
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Context deletion status returned
+          content:
+            application/json:
+              schema:
+                type: boolean
+        '400': { description: Validation error }

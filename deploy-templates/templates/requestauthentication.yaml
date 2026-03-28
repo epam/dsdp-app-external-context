@@ -1,0 +1,22 @@
+kind: RequestAuthentication
+apiVersion: security.istio.io/v1beta1
+metadata:
+  name: {{ include "application-external-context.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "application-external-context.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "application-external-context.selectorLabels" . | nindent 6 }}
+  jwtRules:
+    - forwardOriginalToken: true
+      fromHeaders:
+        - name: X-Access-Token
+      issuer: {{ include "issuer.admin" . }}
+      jwksUri: {{ include "jwksUri.admin" . }}
+    - forwardOriginalToken: true
+      fromHeaders:
+        - name: X-Access-Token
+      issuer: {{ include "issuer.mygov-biz" . }}
+      jwksUri: {{ include "jwksUri.mygov-biz" . }}

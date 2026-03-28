@@ -1,0 +1,24 @@
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ include "application-external-context.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "application-external-context.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "application-external-context.selectorLabels" . | nindent 6 }}
+  rules:
+    - from:
+        - source:
+            notRequestPrincipals:
+              - '*'
+      to:
+        - operation:
+            notPaths:
+              - /actuator*
+              - /openapi
+              - /swagger-ui/*
+              - /v3*
+  action: DENY

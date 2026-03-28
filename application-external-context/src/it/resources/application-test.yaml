@@ -1,0 +1,65 @@
+de:
+  flapdoodle:
+    mongodb:
+      embedded:
+        version: 8.2.2
+spring:
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: app_context
+      username: "user"
+      password: "password"
+      auto-index-creation: true
+mongo:
+  collections:
+    applicationSteps: application_steps_test
+    applicationVars: application_vars_test
+
+external-context:
+  ttl: 30s
+
+management:
+  tracing:
+    baggage:
+      correlation:
+        enabled: true
+        fields: x-request-id
+      remote-fields: x-request-id
+    enabled: true
+    sampling:
+      probability: 1.0
+    propagation:
+      type: ["w3c", "b3"]
+  endpoints:
+    web:
+      exposure:
+        include: 'health'
+  endpoint:
+    health:
+      enabled: true
+      show-details: always
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState, webServices
+    loggers:
+      enabled: true
+    prometheus:
+      enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+    kafka:
+      enabled: false
+    kubernetes:
+      enabled: false
+
+platform:
+  logging:
+    aspect:
+      enabled: false

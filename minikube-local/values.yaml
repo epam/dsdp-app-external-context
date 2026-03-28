@@ -1,0 +1,28 @@
+global:
+  deploymentMode: development
+
+container:
+  extraEnvVars: |
+    - name: JAVA_OPTS
+      value: ""
+
+image:
+  repository: application-external-context
+  tag: latest
+
+ingress:
+  enabled: false
+
+istio:
+  sidecar:
+    enabled: false
+
+keycloak:
+  url: "http://keycloak.user-management:8080"
+
+mongodb:
+  databaseOverride: "app_context"
+  integrationSecretName: "app-context-mongo-app-secrets"
+  appSecretName: "app-context-mongo-app-secrets"
+  host: "app-context-mongodb"
+  port: "27017"

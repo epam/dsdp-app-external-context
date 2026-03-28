@@ -1,0 +1,78 @@
+api:
+  base-path: /v1alpha/applications
+
+external-context:
+  ttl: 30d
+
+spring:
+  data:
+    mongodb:
+      host: localhost:27017
+      database: app_context
+      username: "user"
+      password: "password"
+      auto-index-creation: true
+mongo:
+  collections:
+    applicationSteps: application_steps
+    applicationVars: application_vars
+
+management:
+  tracing:
+    baggage:
+      correlation:
+        enabled: true
+        fields: x-request-id
+      remote-fields: x-request-id
+    enabled: true
+    sampling:
+      probability: 1.0
+    propagation:
+      type: ["w3c", "b3"]
+  endpoints:
+    web:
+      exposure:
+        include: 'health'
+  endpoint:
+    health:
+      enabled: true
+      show-details: always
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState, webServices
+    loggers:
+      enabled: true
+    prometheus:
+      enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+    kafka:
+      enabled: false
+    kubernetes:
+      enabled: false
+
+platform:
+  logging:
+    aspect:
+      enabled: false
+  security:
+    enabled: true
+    whitelist:
+      - /swagger
+      - /v3/api-docs/**
+      - /swagger-ui/**
+      - /actuator/**
+      - /openapi.yaml
+      - /swagger-ui.html
+
+springdoc:
+  swagger-ui:
+    url: /openapi.yaml
+    path: /swagger-ui.html
+  api-docs:
+    enabled: true

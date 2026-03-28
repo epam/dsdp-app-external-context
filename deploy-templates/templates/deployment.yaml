@@ -1,0 +1,186 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "application-external-context.fullname" . }}
+  annotations:
+    configmap.reloader.stakater.com/reload: '{{ include "application-external-context.name" . }}'
+    secret.reloader.stakater.com/reload: '{{ .Values.mongodb.integrationSecretName }},{{ .Values.mongodb.appSecretName }}'
+  labels:
+    {{- include "application-external-context.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      {{- include "application-external-context.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: {{ .Values.global.deploymentStrategy | default "Recreate" }}
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.istio.sidecar.enabled }}
+        sidecar.istio.io/inject: "true"
+        traffic.sidecar.istio.io/excludeOutboundPorts: '{{ .Values.extraTrafficExcludeOutboundPorts }}'
+        {{- if .Values.istio.sidecar.requestsLimitsEnabled }}
+        {{- include "application-external-context.istioResources" . | nindent 8 }}
+        {{- else }}
+        inject.istio.io/templates: 'sidecar,emptyRequestsLimits'
+        {{- end }}
+        {{- end }}
+        {{- range $key, $value := .Values.podAnnotations }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+      labels:
+        {{- include "application-external-context.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "application-external-context.serviceAccountName" . }}
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+        - name: {{ . }}
+        {{- end }}
+      {{- else if .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.image.pullSecrets }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+      automountServiceAccountToken: {{ .Values.automountServiceAccountToken }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      schedulerName: {{ .Values.schedulerName }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      dnsPolicy: {{ .Values.dnsPolicy }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      initContainers:
+        - name: dbchecker
+          image: "{{ .Values.global.imageRegistry | default "docker.io" }}/{{ .Values.dbchecker.image.repository }}:{{ .Values.dbchecker.image.tag }}"
+          imagePullPolicy: {{ .Values.dbchecker.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.dbchecker.securityContext | nindent 12 }}
+          command:
+            - sh
+            - -c
+            - |
+              echo 'Waiting for Database to become ready...'
+
+              # Ensure environment variables are set
+              if [ -z "$MONGODB_HOST" ] || [ -z "$MONGODB_PORT" ]; then
+                echo "ERROR: MONGODB_HOST or MONGODB_PORT are not set properly."
+                exit 1
+              fi
+
+              until printf "." && nc -z -w 2 "$MONGODB_HOST" "$MONGODB_PORT"; do
+                  sleep 2;
+              done;
+
+              echo 'Database OK ✓'
+          resources:
+            {{- toYaml .Values.dbchecker.resources | nindent 12 }}
+          env:
+            - name: MONGODB_HOST
+              {{- if .Values.mongodb.host }}
+              value: {{ .Values.mongodb.host }}
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mongodb.integrationSecretName }}
+                  key: address
+              {{- end }}
+            - name: MONGODB_PORT
+              {{- if .Values.mongodb.port }}
+              value: {{ .Values.mongodb.port | squote }}
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mongodb.integrationSecretName }}
+                  key: port
+              {{- end }}
+      {{- with .Values.extraInitContainers }}
+        {{- tpl . $ | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ include "application-external-context.name" . }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.lifecycleHooks }}
+          lifecycle:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.container.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            {{- with .Values.container.extraEnvVars }}
+              {{- tpl . $ | nindent 12 }}
+            {{- end }}
+            - name: SPRING_CLOUD_BOOTSTRAP_ENABLED
+              value: 'true'
+            {{- if eq .Values.global.deploymentMode "development" }}
+            - name: SPRING_PROFILES_ACTIVE
+              value: 'development'
+            {{- end }}
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.mongodb.integrationSecretName }}
+                  key: host
+            - name: DB_NAME
+              value: {{ include "database.name" . }}
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  key: applicationExternalContextSvcName
+                  name: {{ .Values.mongodb.appSecretName }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: applicationExternalContextSvcPass
+                  name: {{ .Values.mongodb.appSecretName }}
+          {{- with .Values.container.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: api
+              containerPort: {{ .Values.container.port }}
+              protocol: TCP
+          {{- with .Values.container.startupProbe }}
+          startupProbe:
+            {{- tpl . $ | nindent 12 }}
+          {{- end }}
+          {{- with .Values.container.livenessProbe }}
+          livenessProbe:
+            {{- tpl . $ | nindent 12 }}
+          {{- end }}
+          {{- with .Values.container.readinessProbe }}
+          readinessProbe:
+            {{- tpl . $ | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            {{- with .Values.container.extraVolumeMounts }}
+              {{- tpl . $ | nindent 12 }}
+            {{- end }}
+            - name: {{ include "application-external-context.name" . }}
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        {{- with .Values.container.extraVolumes }}
+          {{- tpl . $ | nindent 8 }}
+        {{- end }}
+        - name: {{ include "application-external-context.name" . }}
+          configMap:
+            name: {{ include "application-external-context.name" . }}

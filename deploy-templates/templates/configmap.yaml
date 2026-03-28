@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "application-external-context.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "application-external-context.labels" . | nindent 4 }}
+data:
+  application.yaml: |-
+    api:
+      base-path: {{ .Values.api.basePath }}
+
+    platform:
+      logging:
+        aspect:
+          enabled: {{ .Values.platform.logging.aspect.enabled }}
+    
+    spring:
+      data:
+        mongodb:
+          host: ${DB_HOST}
+          database: ${DB_NAME}
+          username: ${DB_USERNAME}
+          password: ${DB_PASSWORD}
+          authentication-database: ${DB_NAME}
+          {{- if .Values.mongodb.replicaset.enabled }}
+          replica-set-name: ${DB_RS_NAME}
+          {{- end }}
+          {{- if .Values.mongodb.ssl.enabled }}
+          ssl:
+            bundle: mongodb
+            enabled: true
+          {{- end }}
+      {{- if .Values.mongodb.ssl.enabled }}
+      ssl:
+        bundle:
+          pem:
+            mongodb:
+              truststore:
+                certificate: ${DB_SSL_CA_PATH}
+              keystore:
+                certificate: ${DB_SSL_CERT_PATH}
+                private-key: ${DB_SSL_KEY_PATH}
+      {{- end }}
+    
+    external-context:
+      ttl: {{ .Values.externalContext.ttl }}
+
+    mongo:
+      collections:
+        applicationSteps: {{ .Values.mongodb.collections.applicationSteps }}
+        applicationVars: {{ .Values.mongodb.collections.applicationVars }}
